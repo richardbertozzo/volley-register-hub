@@ -6,10 +6,10 @@ import { MapPinIcon, CalendarIcon } from './Icons';
 
 interface GameInfoProps {
   game: Game | null;
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
-const GameInfo = ({ game, isLoading }: GameInfoProps) => {
+const GameInfo = ({ game, isLoading = false }: GameInfoProps) => {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">

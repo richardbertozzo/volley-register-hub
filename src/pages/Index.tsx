@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useGames } from '@/hooks/useGames';
 import { useGamePlayers } from '@/hooks/useGamePlayers';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { games, isLoadingGames } = useGames();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [teams, setTeams] = useState<GamePlayer[][]>([]);
@@ -129,7 +131,10 @@ const Index = () => {
               <>
                 {/* Game details */}
                 <div className="glass-card p-8 rounded-2xl shadow-sm animate-fade-in">
-                  <GameInfo game={selectedGame} />
+                  <GameInfo 
+                    game={selectedGame} 
+                    isLoading={isLoadingGames} 
+                  />
                 </div>
                 
                 {/* Players grid */}
@@ -174,7 +179,13 @@ const Index = () => {
                     {teams.length > 0 ? (
                       <div className="grid gap-6 lg:grid-cols-2">
                         {teams.map((team, index) => (
-                          <TeamDisplay key={index} team={team} teamNumber={index + 1} />
+                          <TeamDisplay
+                            key={index}
+                            team={team}
+                            teamNumber={index + 1}
+                            teamSize={teamSize}
+                            isLoading={false}
+                          />
                         ))}
                       </div>
                     ) : (

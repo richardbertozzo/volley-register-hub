@@ -2,7 +2,7 @@
 import { GamePlayer, Team, TeamSize } from '@/types';
 
 // Function to balance teams by gender
-export function generateBalancedTeams(players: GamePlayer[], teamSize: TeamSize): Team[] {
+export function generateTeams(players: GamePlayer[], teamSize: TeamSize): GamePlayer[][] {
   if (!players.length) return [];
   
   // Clone players array to avoid modifying the original
@@ -24,17 +24,14 @@ export function generateBalancedTeams(players: GamePlayer[], teamSize: TeamSize)
   if (numberOfTeams === 0) return [];
   
   // Initialize teams
-  const teams: Team[] = Array.from({ length: numberOfTeams }, (_, i) => ({
-    id: i + 1,
-    players: []
-  }));
+  const teams: GamePlayer[][] = Array.from({ length: numberOfTeams }, () => []);
   
   // Helper function to distribute players
-  const distributePlayersToTeams = (playersArray: GamePlayer[], teams: Team[]) => {
+  const distributePlayersToTeams = (playersArray: GamePlayer[], teams: GamePlayer[][]) => {
     playersArray.forEach((player, index) => {
       const teamIndex = index % teams.length;
-      if (teams[teamIndex].players.length < teamSize) {
-        teams[teamIndex].players.push(player);
+      if (teams[teamIndex].length < teamSize) {
+        teams[teamIndex].push(player);
       }
     });
   };
@@ -50,9 +47,9 @@ export function generateBalancedTeams(players: GamePlayer[], teamSize: TeamSize)
   
   // Make sure teams don't exceed team size
   teams.forEach(team => {
-    team.players = team.players.slice(0, teamSize);
+    team.players = team.slice(0, teamSize);
   });
   
   // Remove any teams that don't have exactly teamSize players
-  return teams.filter(team => team.players.length === teamSize);
+  return teams.filter(team => team.length === teamSize);
 }

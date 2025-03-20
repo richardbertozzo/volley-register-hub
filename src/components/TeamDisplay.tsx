@@ -1,19 +1,23 @@
 
-import { Team, TeamSize } from '@/types';
+import { GamePlayer, TeamSize } from '@/types';
 import { ShuffleIcon } from './Icons';
 
 interface TeamDisplayProps {
-  teams: Team[];
+  teams?: GamePlayer[][];
+  team?: GamePlayer[];
+  teamNumber?: number;
   teamSize: TeamSize;
-  isLoading: boolean;
+  isLoading?: boolean;
   onTeamRegenerate?: () => void;
   className?: string;
 }
 
 const TeamDisplay = ({ 
-  teams, 
+  teams = [], 
+  team, 
+  teamNumber,
   teamSize, 
-  isLoading,
+  isLoading = false,
   onTeamRegenerate,
   className = ""
 }: TeamDisplayProps) => {
@@ -30,6 +34,26 @@ const TeamDisplay = ({
     );
   }
 
+  // Handle single team display
+  if (team && teamNumber) {
+    return (
+      <div className={`bg-volleyball-50 rounded-lg p-3 border border-volleyball-100 ${className}`}>
+        <h4 className="text-sm font-medium text-volleyball-700 mb-2">Time {teamNumber}</h4>
+        <div className="grid grid-cols-1 gap-2">
+          {team.map((player) => (
+            <div key={player.id} className="flex justify-between items-center px-3 py-2 bg-white rounded-md shadow-sm">
+              <span className="font-medium text-volleyball-800">{player.playerName}</span>
+              <span className="text-xs px-2 py-1 rounded-full bg-volleyball-100 text-volleyball-700">
+                {player.playerGender === 'male' ? 'M' : player.playerGender === 'female' ? 'F' : 'O'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle teams list display
   if (teams.length === 0) {
     return (
       <div className={`glass-card p-6 ${className}`}>
@@ -60,11 +84,11 @@ const TeamDisplay = ({
         )}
       </div>
       <div className="space-y-4">
-        {teams.map((team) => (
-          <div key={team.id} className="bg-volleyball-50 rounded-lg p-3 border border-volleyball-100">
-            <h4 className="text-sm font-medium text-volleyball-700 mb-2">Time {team.id}</h4>
+        {teams.map((teamPlayers, index) => (
+          <div key={index} className="bg-volleyball-50 rounded-lg p-3 border border-volleyball-100">
+            <h4 className="text-sm font-medium text-volleyball-700 mb-2">Time {index + 1}</h4>
             <div className="grid grid-cols-1 gap-2">
-              {team.players.map((player) => (
+              {teamPlayers.map((player) => (
                 <div key={player.id} className="flex justify-between items-center px-3 py-2 bg-white rounded-md shadow-sm">
                   <span className="font-medium text-volleyball-800">{player.playerName}</span>
                   <span className="text-xs px-2 py-1 rounded-full bg-volleyball-100 text-volleyball-700">

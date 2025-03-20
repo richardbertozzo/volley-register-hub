@@ -31,7 +31,7 @@ const formSchema = z.object({
   date: z.string().min(1, 'A data é obrigatória'),
   time: z.string().min(1, 'O horário é obrigatório'),
   location: z.string().min(3, 'Localização deve ter pelo menos 3 caracteres'),
-  maxPlayers: z.string().transform(val => parseInt(val, 10)),
+  maxPlayers: z.coerce.number().min(4, 'Mínimo de 4 jogadores'),
   status: z.enum(['upcoming', 'completed', 'cancelled']),
 });
 
@@ -47,7 +47,7 @@ const Admin = () => {
       date: format(new Date(), 'yyyy-MM-dd'),
       time: '19:00',
       location: '',
-      maxPlayers: '24',
+      maxPlayers: 24,
       status: 'upcoming',
     },
   });
