@@ -1,220 +1,206 @@
 
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useGames } from '@/hooks/useGames';
+import { useGamePlayers } from '@/hooks/useGamePlayers';
+import { Game, GamePlayer } from '@/types';
 import NavBar from '@/components/NavBar';
+import GameInfo from '@/components/GameInfo';
 import PlayerGrid from '@/components/PlayerGrid';
 import TeamDisplay from '@/components/TeamDisplay';
-import GameInfo from '@/components/GameInfo';
-import { Game, GamePlayer, User, Team } from '@/types';
-import { generateBalancedTeams } from '@/lib/team-generator';
+import { Button } from '@/components/ui/button';
+import { TeamSize } from '@/types';
+import { generateTeams } from '@/lib/team-generator';
+import { toast } from 'sonner';
 
 const Index = () => {
-  // Mock data for demonstration
-  const [user, setUser] = useState<User | null>({
-    id: '1',
-    email: 'user@example.com',
-    name: 'João Silva',
-    gender: 'male',
-    isAdmin: true
-  });
-  
-  const [game, setGame] = useState<Game | null>({
-    id: '1',
-    date: new Date(2023, 6, 15, 19, 0, 0).toISOString(),
-    location: 'Quadra Central - Rua das Palmeiras, 123',
-    maxPlayers: 24,
-    status: 'upcoming'
-  });
-  
-  const [players, setPlayers] = useState<GamePlayer[]>([
-    {
-      id: '1',
-      gameId: '1',
-      playerId: '1',
-      playerName: 'João Silva',
-      playerGender: 'male',
-      hasPaid: true
-    },
-    {
-      id: '2',
-      gameId: '1',
-      playerId: '2',
-      playerName: 'Maria Oliveira',
-      playerGender: 'female',
-      hasPaid: true
-    },
-    {
-      id: '3',
-      gameId: '1',
-      playerId: '3',
-      playerName: 'Pedro Santos',
-      playerGender: 'male',
-      hasPaid: false
-    },
-    {
-      id: '4',
-      gameId: '1',
-      playerId: '4',
-      playerName: 'Ana Costa',
-      playerGender: 'female',
-      hasPaid: true
-    },
-    {
-      id: '5',
-      gameId: '1',
-      playerId: '5',
-      playerName: 'Carlos Ferreira',
-      playerGender: 'male',
-      hasPaid: false
-    },
-    {
-      id: '6',
-      gameId: '1',
-      playerId: '6',
-      playerName: 'Juliana Lima',
-      playerGender: 'female',
-      hasPaid: true
-    },
-    {
-      id: '7',
-      gameId: '1',
-      playerId: '7',
-      playerName: 'Rafael Almeida',
-      playerGender: 'male',
-      hasPaid: true
-    },
-    {
-      id: '8',
-      gameId: '1',
-      playerId: '8',
-      playerName: 'Amanda Rocha',
-      playerGender: 'female',
-      hasPaid: false
-    }
-  ]);
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [teamsOf3, setTeamsOf3] = useState<Team[]>([]);
-  const [teamsOf4, setTeamsOf4] = useState<Team[]>([]);
+  const { user, signOut } = useAuth();
+  const { games, isLoadingGames } = useGames();
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [teams, setTeams] = useState<GamePlayer[][]>([]);
+  const [teamSize, setTeamSize] = useState<TeamSize>(4);
 
-  // Generate teams on initial load and when players change
+  // Selecionamos o primeiro jogo por padrão quando os jogos são carregados
   useEffect(() => {
-    generateTeams();
-  }, [players]);
+    if (games && games.length > 0 && !selectedGameId) {
+      setSelectedGameId(games[0].id);
+    }
+  }, [games, selectedGameId]);
 
-  const generateTeams = () => {
-    // Only generate teams if there are enough players
-    if (players.length >= 3) {
-      const newTeamsOf3 = generateBalancedTeams(players, 3);
-      setTeamsOf3(newTeamsOf3);
-    } else {
-      setTeamsOf3([]);
+  const { 
+    players, 
+    isLoadingPlayers,
+    registerPlayer,
+    unregisterPlayer,
+    updatePaymentStatus
+  } = useGamePlayers(selectedGameId);
+
+  const handleGenerateTeams = () => {
+    if (!players || players.length < 2) {
+      toast.error('Não há jogadores suficientes para gerar times');
+      return;
     }
     
-    if (players.length >= 4) {
-      const newTeamsOf4 = generateBalancedTeams(players, 4);
-      setTeamsOf4(newTeamsOf4);
-    } else {
-      setTeamsOf4([]);
-    }
+    const generatedTeams = generateTeams(players, teamSize);
+    setTeams(generatedTeams);
+    toast.success(`Times gerados com sucesso! (${teamSize}x${teamSize})`);
   };
-
-  const handlePaymentUpdate = (playerId: string, hasPaid: boolean) => {
-    // Mock API call
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        setPlayers(players.map(p => 
-          p.playerId === playerId ? { ...p, hasPaid } : p
-        ));
-        resolve();
-      }, 500);
-    });
-  };
-
+  
   const handleRegister = () => {
     if (!user) {
       toast.error('Você precisa estar logado para se registrar');
       return;
     }
     
-    // Check if user is already registered
-    if (players.some(p => p.playerId === user.id)) {
-      toast.error('Você já está registrado para este jogo');
+    if (!selectedGameId) {
+      toast.error('Nenhum jogo selecionado');
       return;
     }
     
-    // Mock registration
-    setIsLoading(true);
-    setTimeout(() => {
-      const newPlayer: GamePlayer = {
-        id: `${Date.now()}`,
-        gameId: game?.id || '',
-        playerId: user.id,
-        playerName: user.name,
-        playerGender: user.gender,
-        hasPaid: false
-      };
-      
-      setPlayers([...players, newPlayer]);
-      setIsLoading(false);
-      toast.success('Você foi registrado com sucesso!');
-    }, 800);
+    registerPlayer(user);
   };
-
+  
   const handleUnregister = (playerId: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setPlayers(players.filter(p => p.playerId !== playerId));
-      setIsLoading(false);
-      toast.success('Registro cancelado com sucesso');
-    }, 800);
+    if (!selectedGameId) {
+      toast.error('Nenhum jogo selecionado');
+      return;
+    }
+    
+    unregisterPlayer(playerId);
+  };
+  
+  const handlePaymentUpdate = (playerId: string, hasPaid: boolean) => {
+    if (!selectedGameId) {
+      toast.error('Nenhum jogo selecionado');
+      return;
+    }
+    
+    updatePaymentStatus({ playerId, hasPaid });
   };
 
-  const handleSignOut = () => {
-    setUser(null);
-    toast.success('Você saiu com sucesso');
+  const handleTeamSizeChange = (size: TeamSize) => {
+    setTeamSize(size);
+    if (teams.length > 0) {
+      handleGenerateTeams();
+    }
   };
+
+  const selectedGame = games?.find(game => game.id === selectedGameId) || null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-volleyball-50/70 to-white">
-      <NavBar user={user} onSignOut={handleSignOut} />
+      <NavBar user={user} onSignOut={signOut} />
       
-      <main className="container mx-auto px-4 pt-24 pb-16 page-transition">
-        <div className="text-center mb-10 animate-slide-down">
-          <h1 className="text-4xl md:text-5xl font-bold text-volleyball-800 mb-6">Larik Volei Club</h1>
-          
-          <GameInfo game={game} isLoading={isLoading} />
-        </div>
-        
-        <div className="space-y-8">
-          <PlayerGrid 
-            players={players}
-            maxPlayers={game?.maxPlayers || 24}
-            currentUser={user}
-            isLoading={isLoading}
-            onPaymentUpdate={handlePaymentUpdate}
-            onRegister={handleRegister}
-            onUnregister={handleUnregister}
-          />
-          
-          <hr className="border-gray-200 my-8" />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TeamDisplay 
-              teams={teamsOf3} 
-              teamSize={3}
-              isLoading={isLoading}
-              onTeamRegenerate={generateTeams}
-            />
-            
-            <TeamDisplay 
-              teams={teamsOf4} 
-              teamSize={4}
-              isLoading={isLoading}
-              onTeamRegenerate={generateTeams}
-            />
+      <main className="container mx-auto px-4 pt-24 pb-12">
+        {isLoadingGames ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-volleyball-700"></div>
           </div>
-        </div>
+        ) : games && games.length > 0 ? (
+          <div className="space-y-10">
+            {/* Game selection and info */}
+            <div className="glass-card p-8 rounded-2xl shadow-sm animate-fade-in">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-volleyball-800">Próximos Jogos</h1>
+                <p className="text-gray-600 mt-2">Escolha um jogo para ver detalhes e se registrar</p>
+              </div>
+              
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {games.map((game) => (
+                  <button
+                    key={game.id}
+                    onClick={() => setSelectedGameId(game.id)}
+                    className={`text-left p-4 rounded-xl transition-all ${
+                      selectedGameId === game.id
+                        ? 'bg-volleyball-600 text-white shadow-md ring-2 ring-volleyball-300'
+                        : 'bg-white hover:bg-volleyball-50 text-volleyball-800'
+                    }`}
+                  >
+                    <div className="font-semibold">{new Date(game.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                    <div className={selectedGameId === game.id ? 'text-white/90' : 'text-gray-500'}>
+                      {game.location}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {selectedGame && (
+              <>
+                {/* Game details */}
+                <div className="glass-card p-8 rounded-2xl shadow-sm animate-fade-in">
+                  <GameInfo game={selectedGame} />
+                </div>
+                
+                {/* Players grid */}
+                <div className="glass-card p-8 rounded-2xl shadow-sm animate-fade-in">
+                  <PlayerGrid
+                    players={players || []}
+                    maxPlayers={selectedGame.maxPlayers}
+                    currentUser={user}
+                    isLoading={isLoadingPlayers}
+                    onPaymentUpdate={handlePaymentUpdate}
+                    onRegister={handleRegister}
+                    onUnregister={handleUnregister}
+                  />
+                </div>
+                
+                {/* Team generator */}
+                {players && players.length >= 2 && (
+                  <div className="glass-card p-8 rounded-2xl shadow-sm animate-fade-in">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-bold text-volleyball-800">Gerador de Times</h2>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant={teamSize === 3 ? "default" : "outline"}
+                          onClick={() => handleTeamSizeChange(3)}
+                          className="w-10 h-10 rounded-full"
+                        >
+                          3x3
+                        </Button>
+                        <Button
+                          variant={teamSize === 4 ? "default" : "outline"}
+                          onClick={() => handleTeamSizeChange(4)}
+                          className="w-10 h-10 rounded-full"
+                        >
+                          4x4
+                        </Button>
+                        <Button onClick={handleGenerateTeams} className="ml-2">
+                          Gerar times
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {teams.length > 0 ? (
+                      <div className="grid gap-6 lg:grid-cols-2">
+                        {teams.map((team, index) => (
+                          <TeamDisplay key={index} team={team} teamNumber={index + 1} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10">
+                        <p className="text-gray-600">Clique em "Gerar times" para criar times equilibrados</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="glass-card p-8 rounded-2xl shadow-sm text-center">
+            <h1 className="text-2xl font-bold text-volleyball-800 mb-4">Não há jogos disponíveis</h1>
+            <p className="text-gray-600">Fique atento para os próximos anúncios de jogos</p>
+            {user?.isAdmin && (
+              <Button 
+                className="mt-6"
+                onClick={() => navigate('/admin')}
+              >
+                Área Administrativa
+              </Button>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

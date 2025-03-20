@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { VolleyballIcon } from '@/components/Icons';
+import { useAuth } from '@/context/AuthContext';
 
 const Signup = () => {
   const [name, setName] = useState('');
@@ -11,6 +12,7 @@ const Signup = () => {
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,12 +24,13 @@ const Signup = () => {
     
     setIsLoading(true);
     
-    // Mock signup
-    setTimeout(() => {
+    try {
+      await signUp(email, password, name, gender);
+      // O AuthContext vai redirecionar
+    } catch (error: any) {
+      console.error('Erro de cadastro:', error);
       setIsLoading(false);
-      toast.success('Cadastro realizado com sucesso');
-      navigate('/login');
-    }, 1000);
+    }
   };
 
   return (

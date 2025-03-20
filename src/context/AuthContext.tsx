@@ -21,10 +21,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check active session
+    // Configurar listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      
+      if (event === 'SIGNED_IN' && session) {
+        try {
+          const { data: playerData, error: playerError } = await supabase
+            .from('players')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (playerError) {
+            console.error('Error fetching player data:', playerError);
+            setUser(null);
+          } else {
+            console.log('Player data loaded:', playerData);
+            setUser({
+              id: playerData.id,
+              email: playerData.email,
+              name: playerData.name,
+              gender: playerData.gender as 'male' | 'female' | 'other',
+              isAdmin: playerData.is_admin
+            });
+          }
+        } catch (error) {
+          console.error('Error in auth state change handler:', error);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    // Verificar sessão atual
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Current session:', session);
+        
         if (session) {
           const { data: playerData, error: playerError } = await supabase
             .from('players')
@@ -36,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error('Error fetching player data:', playerError);
             setUser(null);
           } else {
+            console.log('Initial player data loaded:', playerData);
             setUser({
               id: playerData.id,
               email: playerData.email,
@@ -54,32 +90,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     checkSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { data: playerData, error: playerError } = await supabase
-          .from('players')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (playerError) {
-          console.error('Error fetching player data:', playerError);
-          setUser(null);
-        } else {
-          setUser({
-            id: playerData.id,
-            email: playerData.email,
-            name: playerData.name,
-            gender: playerData.gender as 'male' | 'female' | 'other',
-            isAdmin: playerData.is_admin
-          });
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
-
     return () => {
       subscription.unsubscribe();
     };
@@ -88,6 +98,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Signing in with:', email);
+      
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) throw error;
@@ -95,6 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast.success('Login bem-sucedido');
       navigate('/');
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast.error(error.message || 'Erro ao fazer login');
       throw error;
     } finally {
@@ -105,6 +118,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, name: string, gender: 'male' | 'female' | 'other') => {
     try {
       setLoading(true);
+      console.log('Signing up:', { email, name, gender });
+      
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({ 
         email, 
@@ -118,6 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (authError) throw authError;
+      console.log('Auth user created:', authData);
       
       if (authData.user) {
         // Create player record
@@ -132,12 +148,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           ]);
           
-        if (playerError) throw playerError;
+        if (playerError) {
+          console.error('Error creating player record:', playerError);
+          throw playerError;
+        }
+        
+        console.log('Player record created successfully');
       }
       
-      toast.success('Conta criada com sucesso');
-      navigate('/');
+      toast.success('Conta criada com sucesso. Verifique seu email para confirmar o cadastro.');
+      navigate('/login');
     } catch (error: any) {
+      console.error('Sign up error:', error);
       toast.error(error.message || 'Erro ao criar conta');
       throw error;
     } finally {
@@ -147,6 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      console.log('Signing out...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -154,6 +177,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast.success('Você saiu com sucesso');
       navigate('/');
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast.error(error.message || 'Erro ao sair');
       throw error;
     }

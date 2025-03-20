@@ -13,13 +13,18 @@ export function useGames() {
   const { data: games, isLoading: isLoadingGames, error } = useQuery({
     queryKey: ['games'],
     queryFn: async () => {
+      console.log('Fetching games...');
       const { data, error } = await supabase
         .from('games')
         .select('*')
         .order('date', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching games:', error);
+        throw error;
+      }
       
+      console.log('Games fetched:', data);
       return data.map(game => ({
         id: game.id,
         date: game.date,
@@ -34,6 +39,7 @@ export function useGames() {
   const createGame = useMutation({
     mutationFn: async (newGame: Omit<Game, 'id'>) => {
       setIsLoading(true);
+      console.log('Creating game:', newGame);
       const { data, error } = await supabase
         .from('games')
         .insert([
@@ -47,8 +53,12 @@ export function useGames() {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating game:', error);
+        throw error;
+      }
       
+      console.log('Game created:', data);
       return data;
     },
     onSuccess: () => {
@@ -66,12 +76,18 @@ export function useGames() {
   const deleteGame = useMutation({
     mutationFn: async (gameId: string) => {
       setIsLoading(true);
+      console.log('Deleting game:', gameId);
       const { error } = await supabase
         .from('games')
         .delete()
         .eq('id', gameId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting game:', error);
+        throw error;
+      }
+      
+      console.log('Game deleted');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
@@ -102,14 +118,19 @@ export function useGame(gameId: string | null) {
     queryFn: async () => {
       if (!gameId) return null;
       
+      console.log('Fetching single game:', gameId);
       const { data, error } = await supabase
         .from('games')
         .select('*')
         .eq('id', gameId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching game:', error);
+        throw error;
+      }
       
+      console.log('Game fetched:', data);
       return {
         id: data.id,
         date: data.date,

@@ -15,6 +15,7 @@ export function useGamePlayers(gameId: string | null) {
     queryFn: async () => {
       if (!gameId) return [];
       
+      console.log('Fetching players for game:', gameId);
       const { data, error } = await supabase
         .from('game_players')
         .select(`
@@ -29,8 +30,12 @@ export function useGamePlayers(gameId: string | null) {
         `)
         .eq('game_id', gameId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching game players:', error);
+        throw error;
+      }
       
+      console.log('Game players fetched:', data);
       return data.map(record => ({
         id: record.id,
         gameId,
@@ -49,6 +54,7 @@ export function useGamePlayers(gameId: string | null) {
       if (!gameId) throw new Error('Game ID is required');
       
       setIsLoading(true);
+      console.log('Registering player for game:', { gameId, playerId: user.id });
       const { data, error } = await supabase
         .from('game_players')
         .insert([
@@ -60,8 +66,12 @@ export function useGamePlayers(gameId: string | null) {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error registering player:', error);
+        throw error;
+      }
       
+      console.log('Player registered:', data);
       return data;
     },
     onSuccess: () => {
@@ -81,13 +91,19 @@ export function useGamePlayers(gameId: string | null) {
       if (!gameId) throw new Error('Game ID is required');
       
       setIsLoading(true);
+      console.log('Unregistering player from game:', { gameId, playerId });
       const { error } = await supabase
         .from('game_players')
         .delete()
         .eq('game_id', gameId)
         .eq('player_id', playerId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error unregistering player:', error);
+        throw error;
+      }
+      
+      console.log('Player unregistered');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['game-players', gameId] });
@@ -106,13 +122,19 @@ export function useGamePlayers(gameId: string | null) {
       if (!gameId) throw new Error('Game ID is required');
       
       setIsLoading(true);
+      console.log('Updating payment status:', { gameId, playerId, hasPaid });
       const { error } = await supabase
         .from('game_players')
         .update({ has_paid: hasPaid })
         .eq('game_id', gameId)
         .eq('player_id', playerId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating payment status:', error);
+        throw error;
+      }
+      
+      console.log('Payment status updated');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['game-players', gameId] });

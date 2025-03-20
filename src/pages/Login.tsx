@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { VolleyballIcon } from '@/components/Icons';
+import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,12 +22,13 @@ const Login = () => {
     
     setIsLoading(true);
     
-    // Mock login
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+      // Não precisamos fazer mais nada aqui, o AuthContext vai redirecionar para a página inicial
+    } catch (error: any) {
+      console.error('Erro de login:', error);
       setIsLoading(false);
-      toast.success('Login realizado com sucesso');
-      navigate('/');
-    }, 1000);
+    }
   };
 
   return (
