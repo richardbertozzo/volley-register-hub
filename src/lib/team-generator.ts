@@ -46,10 +46,5 @@ export function generateTeams(players: GamePlayer[], teamSize: TeamSize): GamePl
   distributePlayersToTeams(otherPlayersArr, teams);
   
   // Make sure teams don't exceed team size
-  teams.forEach(team => {
-    team.players = team.slice(0, teamSize);
-  });
-  
-  // Remove any teams that don't have exactly teamSize players
-  return teams.filter(team => team.length === teamSize);
+  return teams.map(team => team.slice(0, teamSize));
 }
