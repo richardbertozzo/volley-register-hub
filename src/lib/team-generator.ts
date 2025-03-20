@@ -1,5 +1,5 @@
 
-import { GamePlayer, Team, TeamSize } from '@/types';
+import { GamePlayer, TeamSize } from '@/types';
 
 // Function to balance teams by gender
 export function generateTeams(players: GamePlayer[], teamSize: TeamSize): GamePlayer[][] {
