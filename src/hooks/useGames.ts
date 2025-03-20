@@ -1,0 +1,129 @@
+
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Game } from '@/types';
+import { toast } from 'sonner';
+
+export function useGames() {
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch all games
+  const { data: games, isLoading: isLoadingGames, error } = useQuery({
+    queryKey: ['games'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data.map(game => ({
+        id: game.id,
+        date: game.date,
+        location: game.location,
+        maxPlayers: game.max_players,
+        status: game.status as 'upcoming' | 'completed' | 'cancelled'
+      }));
+    }
+  });
+
+  // Create a new game
+  const createGame = useMutation({
+    mutationFn: async (newGame: Omit<Game, 'id'>) => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('games')
+        .insert([
+          {
+            date: newGame.date,
+            location: newGame.location,
+            max_players: newGame.maxPlayers,
+            status: newGame.status
+          }
+        ])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      toast.success('Jogo criado com sucesso');
+      setIsLoading(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao criar jogo');
+      setIsLoading(false);
+    }
+  });
+
+  // Delete a game
+  const deleteGame = useMutation({
+    mutationFn: async (gameId: string) => {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      toast.success('Jogo removido com sucesso');
+      setIsLoading(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao remover jogo');
+      setIsLoading(false);
+    }
+  });
+
+  return {
+    games,
+    isLoadingGames: isLoadingGames || isLoading,
+    error,
+    createGame: createGame.mutate,
+    deleteGame: deleteGame.mutate
+  };
+}
+
+export function useGame(gameId: string | null) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch a single game
+  const { data: game, isLoading: isLoadingGame, error } = useQuery({
+    queryKey: ['game', gameId],
+    queryFn: async () => {
+      if (!gameId) return null;
+      
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        date: data.date,
+        location: data.location,
+        maxPlayers: data.max_players,
+        status: data.status as 'upcoming' | 'completed' | 'cancelled'
+      };
+    },
+    enabled: !!gameId
+  });
+
+  return {
+    game,
+    isLoadingGame: isLoadingGame || isLoading,
+    error
+  };
+}
