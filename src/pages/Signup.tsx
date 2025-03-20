@@ -4,31 +4,48 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { VolleyballIcon } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Define validation schema
+const signupSchema = z.object({
+  name: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
+  email: z.string().email({ message: 'Email inválido' }),
+  password: z.string().min(6, { message: 'Senha deve ter pelo menos 6 caracteres' }),
+  gender: z.enum(['male', 'female', 'other'])
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 const Signup = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signUp } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name || !email || !password) {
-      toast.error('Por favor, preencha todos os campos obrigatórios');
-      return;
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      gender: 'male'
     }
-    
+  });
+
+  const handleSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
     
     try {
-      await signUp(email, password, name, gender);
-      // O AuthContext vai redirecionar
+      await signUp(values.email, values.password, values.name, values.gender);
+      toast.success('Conta criada com sucesso! Por favor, verifique seu email.');
+      navigate('/login');
     } catch (error: any) {
       console.error('Erro de cadastro:', error);
+      toast.error(error.message || 'Erro ao criar conta');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -45,82 +62,106 @@ const Signup = () => {
         </div>
         
         <div className="glass-card p-8 rounded-xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-medium text-volleyball-800">
-                Nome Completo
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-volleyball-800">
+                      Nome Completo
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-volleyball-800">
-                E-mail
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500"
+              
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-volleyball-800">
+                      E-mail
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="email"
+                        className="rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-volleyball-800">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500"
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-volleyball-800">
+                      Senha
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="password"
+                        className="rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="gender" className="block text-sm font-medium text-volleyball-800">
-                Gênero
-              </label>
-              <select
-                id="gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'other')}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500"
+              
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-volleyball-800">
+                      Gênero
+                    </FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-volleyball-500 focus:outline-none focus:ring-1 focus:ring-volleyball-500"
+                      >
+                        <option value="male">Masculino</option>
+                        <option value="female">Feminino</option>
+                        <option value="other">Outro</option>
+                      </select>
+                    </FormControl>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Necessário para balanceamento dos times.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full rounded-lg bg-volleyball-600 px-3 py-2 text-center text-sm font-medium text-white shadow-sm hover:bg-volleyball-700 focus:outline-none focus:ring-2 focus:ring-volleyball-500 focus:ring-offset-2 flex justify-center items-center"
               >
-                <option value="male">Masculino</option>
-                <option value="female">Feminino</option>
-                <option value="other">Outro</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Necessário para balanceamento dos times.
-              </p>
-            </div>
-            
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-lg bg-volleyball-600 px-3 py-2 text-center text-sm font-medium text-white shadow-sm hover:bg-volleyball-700 focus:outline-none focus:ring-2 focus:ring-volleyball-500 focus:ring-offset-2 flex justify-center items-center"
-            >
-              {isLoading ? (
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-              ) : (
-                'Cadastrar'
-              )}
-            </button>
-          </form>
+                {isLoading ? (
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                ) : (
+                  'Cadastrar'
+                )}
+              </button>
+            </form>
+          </Form>
           
           <div className="mt-6 text-center text-sm">
             <span className="text-gray-600">Já tem uma conta?</span>{' '}
