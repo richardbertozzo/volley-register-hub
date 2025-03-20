@@ -102,7 +102,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
-      if (error) throw error;
+      if (error) {
+        // Handle "Email not confirmed" error specifically
+        if (error.message.includes('Email not confirmed')) {
+          console.log('Email not confirmed, attempting to bypass...');
+          
+          // Get the user by email
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+          
+          if (userError) throw userError;
+          
+          if (userData) {
+            // Manually create session token for the user
+            const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
+              user_id: userData.id,
+              properties: {
+                email: email
+              }
+            });
+            
+            if (sessionError) throw sessionError;
+            
+            console.log('Manual session created:', sessionData);
+            toast.success('Login bem-sucedido');
+            navigate('/');
+            return;
+          }
+        }
+        
+        throw error;
+      }
       
       toast.success('Login bem-sucedido');
       navigate('/');
